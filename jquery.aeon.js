@@ -10,14 +10,16 @@ jQuery(document).ready(function($) {
 
   // 最後の要素は白にしておく
   var areas = [
-    {"code": 1, "color": "#ca93ea", "prefectures": []},
-    {"code": 2, "color": "#a7a5ea", "prefectures": []},
-    {"code": 3, "color": "#ffffff", "prefectures": []}
+    {"code": 1, "color": "#57389e", "prefectures": []},
+    {"code": 2, "color": "#92a1e8", "prefectures": []},
+    {"code": 3, "color": "#dcd3ff", "prefectures": []},
+    {"code": 4, "color": "#ffffff", "prefectures": []}
   ];
   // 色分けされるしきい値を設定
   var def_count_pref = [
-    { "code": 1, "thres": 5, "color": "#ca93ea" },
-    { "code": 2, "thres": 1, "color": "#a7a5ea" }
+    { "code": 1, "thres": 8, "color": "#57389e" },
+    { "code": 2, "thres": 5, "color": "#92a1e8" },
+    { "code": 3, "thres": 1, "color": "#dcd3ff" }
   ];
 
   $.getJSON("./data.json", function(aeons) {
