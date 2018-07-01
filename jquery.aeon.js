@@ -1,34 +1,17 @@
 // TODO: 
-//   * 機能の関数化
-// 覚書:
-//   * getJSON() 内で行ったことは、たとえグローバル変数に対してもスコープ外ではなかったことになる
+//   * 既知のバグ: ソートしても画像がそのまま（ソートされない）
+//     * img src で for のカウンターをそのまま使ってるからなんとかしないと
+//   * グローバルの変数関数？はオブジェクト内に入れてあげて、オブジェクト->メソッド() みたいに呼び出せるようにしたい
+//   * gzip 圧縮済みの JSON をデコードして読み出すようにしたい
 
-jQuery(document).ready(function($) {
-  var count_pref = [];
-  // 都道府県のイオンカウントを初期化
-  for(var i=1; i<=47; i++) { count_pref[i] = 0; }
+  var aeons = null;
+  var draw_aeons = function(aeons) {
+    $("#aeon-contents").html('&nbsp;');
 
-  // 最後の要素は白にしておく
-  var areas = [
-    {"code": 1, "color": "#57389e", "prefectures": []},
-    {"code": 2, "color": "#92a1e8", "prefectures": []},
-    {"code": 3, "color": "#dcd3ff", "prefectures": []},
-    {"code": 4, "color": "#ffffff", "prefectures": []}
-  ];
-  // 色分けされるしきい値を設定
-  var def_count_pref = [
-    { "code": 1, "thres": 8, "color": "#57389e" },
-    { "code": 2, "thres": 5, "color": "#92a1e8" },
-    { "code": 3, "thres": 1, "color": "#dcd3ff" }
-  ];
-
-  $.getJSON("./data.json", function(aeons) {
     // 各店舗ごとに処理
-    for(var i in aeons.aeon) {
+    for(var i in aeons) {
       var aeon_info = [];
-      var aeon = aeons.aeon[i];
-      // イオンの所在地からイオンカウントをインクリメント
-      count_pref[aeon.prefecture]++;
+      var aeon = aeons[i];
 
       // 店舗の情報を HTML に出力
       aeon_info.push("<h2>" + aeon.name + "</h2>");
@@ -64,6 +47,81 @@ jQuery(document).ready(function($) {
       aeon_info.push("</ul></div></div><hr />");
       $("#aeon-contents").append(aeon_info.join(""));
     }
+    return true;
+  };
+
+  var get_aeon_count_as_pref = function(aeons) {
+    var count = [];
+
+    // 都道府県のイオンカウントを初期化
+    for(var i=1; i<=47; i++) { count[i] = 0; }
+    for(var i in aeons) {
+      count[aeons[i].prefecture]++;
+    }
+    return count;
+  }
+
+  var get_regions = function(region_type) {
+    var offsets = null;
+    switch(region_type) {
+    case 0:
+      offsets = { start: 1, end: 1 };
+      break;
+    case 1:
+      offsets = { start: 1, end: 7 };
+      break;
+    case 2:
+      offsets = { start: 8, end: 14 };
+      break;
+    case 3:
+      offsets = { start: 15, end: 23 };
+      break;
+    case 4:
+      offsets = { start: 24, end: 30 };
+      break;
+    case 5:
+      offsets = { start: 31, end: 35 };
+      break;
+    case 6:
+      offsets = { start: 36, end: 39 };
+      break;
+    case 7:
+      offsets = { start: 40, end: 46 };
+      break;
+    case 8:
+      offsets = { start: 47, end: 47 };
+      break;
+    default:
+      offsets = { start: 1, end : 1 };
+    }
+    var count = offsets['end'] - offsets['start'];
+    return [...Array(count).keys()].map(i => i + 1 + offsets['start']);
+  };
+
+  var sort_aeons = function(key, order=true) {
+    var sorted_arr = _.sortBy(aeons, function(part) {
+      return part[key];
+    });
+    return order ? sorted_arr : sorted_arr.reverse();
+  };
+
+jQuery(document).ready(function($) {
+  // 色の設定
+  // 最後の要素は白にしておく
+  var areas = [
+    {"code": 1, "color": "#ff99a8", "prefectures": []},
+    {"code": 2, "color": "#fff099", "prefectures": []},
+    {"code": 3, "color": "#a8ff99", "prefectures": []},
+    {"code": 4, "color": "#ffffff", "prefectures": []}
+  ];
+
+  var draw_japanmap = function(count_pref) {
+    // 色分けのしきい値
+    var def_count_pref = [
+      { "code": 1, "thres": 8 },
+      { "code": 2, "thres": 5 },
+      { "code": 3, "thres": 1 }
+    ];
 
     // 都道府県ごとに何色なのかを判定
     for(var i=1; i<=47; i++) {
@@ -92,5 +150,43 @@ jQuery(document).ready(function($) {
       fontColor: "areaColor",
       fontShadowColor: "black",
     });
+    return true;
+  };
+
+  $.when(
+    $.getJSON("./data.json", function(json_data) {
+      aeons = json_data.aeon;
+    })
+  ).done(function() {
+    // console.log(sort_aeons("visit", false));
+
+    draw_aeons(aeons);
+
+    var count_pref = get_aeon_count_as_pref(aeons);
+    draw_japanmap(count_pref);
   });
 });
+
+var redraw_aeons = function(aeons) {
+  var form = document.filter_sort;
+  var params = {
+    "filter": {
+      "type": form.filter_type.value,
+    },
+    "sort": {
+      "type": form.sort_type.value,
+    }
+  };
+  console.log(params);
+  /*
+  if(params['filter']['type'] == 'region') {
+    aeons = _.where(aeons, { prefecture: get_regions(form.filter_region_name.selectedIndex) });
+  }
+  */
+  if(params['sort']['type'] == 'visit') {
+    aeons = sort_aeons("visit", false);
+  }
+  console.log(aeons);
+  draw_aeons(aeons);
+  return true;
+};
