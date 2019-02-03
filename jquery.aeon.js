@@ -1,6 +1,4 @@
 // TODO: 
-//   * 既知のバグ: ソートしても画像がそのまま（ソートされない）
-//     * img src で for のカウンターをそのまま使ってるからなんとかしないと
 //   * グローバルの変数関数？はオブジェクト内に入れてあげて、オブジェクト->メソッド() みたいに呼び出せるようにしたい
 //   * gzip 圧縮済みの JSON をデコードして読み出すようにしたい
 
@@ -14,10 +12,10 @@
       var aeon = aeons[i];
 
       // 店舗の情報を HTML に出力
-      aeon_info.push("<h2>" + aeon.name + "</h2>");
+      aeon_info.push("<h3>" + aeon.name + "</h3>");
       aeon_info.push("<div class=\"row\">");
       aeon_info.push("<div class=\"col-sm-12 col-md-7\">");
-      aeon_info.push("<img src=\"images/aeon_" + i + ".jpg\" class=\"img-responsive\" /></div>");
+      aeon_info.push("<img src=\"images/aeon_" + aeon.id + ".jpg\" class=\"img-responsive\" /></div>");
       aeon_info.push("<div class=\"col-sm-12 col-md-5\">");
       aeon_info.push("<table class=\"table\">");
       aeon_info.push("<thead><th colspan=\"2\">Details</th></thead>");
@@ -38,7 +36,7 @@
       aeon_info.push("<tr><td>Favorite</td><td><span class=\"badge\">" + aeon.ratings.favorite + "</span></td></tr>");
       aeon_info.push("</tbody></table></div>");
       aeon_info.push("<div class=\"col-sm-12 col-md-6\">");
-      aeon_info.push("<h3>Comments</h3>");
+      aeon_info.push("<h4>Comments</h4>");
       aeon_info.push("<ul>");
 
       for(var j in aeon.comments) {
@@ -68,7 +66,7 @@
       offsets = { start: 1, end: 1 };
       break;
     case 1:
-      offsets = { start: 1, end: 7 };
+      offsets = { start: 2, end: 7 };
       break;
     case 2:
       offsets = { start: 8, end: 14 };
@@ -92,17 +90,22 @@
       offsets = { start: 47, end: 47 };
       break;
     default:
-      offsets = { start: 1, end : 1 };
+      offsets = { start: 1, end: 1 };
     }
-    var count = offsets['end'] - offsets['start'];
-    return [...Array(count).keys()].map(i => i + 1 + offsets['start']);
+    // var count = offsets['end'] - offsets['start'];
+    // return [...Array(count).keys()].map(i => i + 1 + offsets['start']);
+    return offsets;
   };
 
-  var sort_aeons = function(key, order=true) {
+  var sort_aeons = function(aeons, key, order=true) {
     var sorted_arr = _.sortBy(aeons, function(part) {
+      if(key.indexOf('.') > -1) {
+        keys = key.split('.');
+        return part[keys[0]][keys[1]];
+      }
       return part[key];
     });
-    return order ? sorted_arr : sorted_arr.reverse();
+    return order ? sorted_arr.reverse() : sorted_arr;
   };
 
 jQuery(document).ready(function($) {
@@ -158,8 +161,6 @@ jQuery(document).ready(function($) {
       aeons = json_data.aeon;
     })
   ).done(function() {
-    // console.log(sort_aeons("visit", false));
-
     draw_aeons(aeons);
 
     var count_pref = get_aeon_count_as_pref(aeons);
@@ -177,16 +178,20 @@ var redraw_aeons = function(aeons) {
       "type": form.sort_type.value,
     }
   };
-  console.log(params);
-  /*
-  if(params['filter']['type'] == 'region') {
-    aeons = _.where(aeons, { prefecture: get_regions(form.filter_region_name.selectedIndex) });
+  
+  switch(params['filter']['type']) {
+  case 'region':
+    pref_offsets = get_regions(form.filter_region_name.selectedIndex);
+    aeons = _.filter(aeons, function(aeon) {
+      pref = aeon['prefecture'];
+      return (pref_offsets['start'] <= pref && pref <= pref_offsets['end']);
+    });
+    break;
+  default: break;
   }
-  */
-  if(params['sort']['type'] == 'visit') {
-    aeons = sort_aeons("visit", false);
-  }
-  console.log(aeons);
+
+  aeons = sort_aeons(aeons, params['sort']['type'], form.sort_option_desc.checked);
+
   draw_aeons(aeons);
   return true;
 };
